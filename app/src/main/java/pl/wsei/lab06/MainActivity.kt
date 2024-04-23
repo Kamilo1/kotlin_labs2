@@ -1,8 +1,11 @@
 package pl.wsei.lab06
 
+import android.app.DatePickerDialog
 import android.os.Bundle
+import android.widget.Switch
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -19,9 +22,13 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.Button
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -30,6 +37,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -47,7 +55,12 @@ import androidx.navigation.NavController
 import pl.wsei.lab06.ui.theme.Lab06Theme
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
-
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.material3.Switch
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -151,6 +164,10 @@ fun ListScreen(navController: NavController) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FormScreen(navController: NavController) {
+    var text by remember { mutableStateOf("") }
+    var date by remember { mutableStateOf(LocalDate.now()) }
+    var isDone by remember { mutableStateOf(false) }
+    var priority by remember { mutableStateOf(Priority.Low) }
     Scaffold(
         topBar = {
             AppTopBar(
@@ -162,7 +179,32 @@ fun FormScreen(navController: NavController) {
         },
         content = { innerPadding ->
             Surface(modifier = Modifier.padding(innerPadding)) {
-                Text("Formularz")
+                Column(modifier = Modifier.padding(16.dp)) {
+                    TextField(
+                        value = text,
+                        onValueChange = { text = it },
+                        label = { Text("Enter text") },
+                        singleLine = true
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    DateField(date) { newDate -> date = newDate }
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("Completed: ")
+                        Switch(
+                            checked = isDone,
+                            onCheckedChange = { isDone = it }
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(16.dp))
+                    PriorityDropdownMenu(
+                        selectedPriority = priority,
+                        onPrioritySelected = { newPriority ->
+                            priority = newPriority  // Aktualizacja stanu priorytetu
+                        }
+                    )
+
+                }
             }
         }
     )
@@ -175,7 +217,70 @@ fun MainScreen() {
         composable("form") { FormScreen(navController = navController) }
     }
 }
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun PriorityDropdownMenu(selectedPriority: Priority, onPrioritySelected: (Priority) -> Unit) {
+    var expanded by remember { mutableStateOf(false) }
 
+
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { expanded = !expanded }
+    ) {
+
+        TextField(
+            readOnly = true,
+            value = selectedPriority.name,
+            onValueChange = {},
+            label = { Text("Priority") },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+            modifier = Modifier.fillMaxWidth().clickable { expanded = true },
+        )
+
+
+        ExposedDropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
+        ) {
+            Priority.values().forEach { priority ->
+                DropdownMenuItem(
+                    text = { Text(priority.name) },
+                    onClick = {
+                        onPrioritySelected(priority)
+                        expanded = false
+                    }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun DateField(selectedDate: LocalDate, onDateChange: (LocalDate) -> Unit) {
+    val context = LocalContext.current
+    var showDialog by remember { mutableStateOf(false) }
+
+    if (showDialog) {
+        val year = selectedDate.year
+        val month = selectedDate.monthValue - 1
+        val day = selectedDate.dayOfMonth
+
+        DatePickerDialog(
+            context, { _, newYear, newMonth, newDay ->
+                onDateChange(LocalDate.of(newYear, newMonth + 1, newDay))
+                showDialog = false
+            }, year, month, day
+        ).show()
+        showDialog = false
+    }
+
+    Button(
+        onClick = { showDialog = true },
+        content = {
+            Text("Select Date: ${selectedDate.format(DateTimeFormatter.ISO_LOCAL_DATE)}")
+        }
+    )
+}
 @Preview(showBackground = true)
 @Composable
 fun MainScreenPreview() {
