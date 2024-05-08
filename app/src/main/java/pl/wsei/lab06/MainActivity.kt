@@ -61,6 +61,12 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.material3.Switch
+import androidx.lifecycle.viewmodel.compose.viewModel
+import pl.wsei.lab06.data.AppContainer
+import pl.wsei.lab06.data.AppDataContainer
+import pl.wsei.lab06.viewmodel.AppViewModelProvider
+import pl.wsei.lab06.viewmodel.ListViewModel
+
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -125,16 +131,12 @@ fun AppTopBar(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ListScreen(navController: NavController) {
+fun ListScreen(
+    navController: NavController,
+    viewModel: ListViewModel = viewModel(factory = AppViewModelProvider.Factory)
+) {
+    val listUiState by viewModel.listUiState.collectAsState()
     Scaffold(
-        topBar = {
-            AppTopBar(
-                navController = navController,
-                title = "List",
-                showBackIcon = false,
-                route = "form"
-            )
-        },
         floatingActionButton = {
             FloatingActionButton(
                 shape = CircleShape,
@@ -150,11 +152,20 @@ fun ListScreen(navController: NavController) {
                 }
             )
         },
-        //pozostałe parametry
-        content = {
-            LazyColumn(modifier = Modifier.padding(it)) {
-                items(items = todoTasks()) { item ->
-                    ListItem(item = item)
+        topBar = {
+            AppTopBar(
+                navController = navController,
+                title = "List",
+                showBackIcon = false,
+                route = "form"
+            )
+        },
+        content = { it ->
+            LazyColumn(
+                modifier = Modifier.padding(it)
+            ) {
+                items(items = listUiState.items, key = { it.id }) {
+                    ListItem(it)
                 }
             }
         }
@@ -339,10 +350,10 @@ fun ListItem(item: TodoTask, modifier: Modifier = Modifier) {
 }
 fun todoTasks(): List<TodoTask> {
     return listOf(
-        TodoTask("Programming", LocalDate.of(2024, 4, 18), false, Priority.Low),
-        TodoTask("Teaching", LocalDate.of(2024, 5, 12), false, Priority.High),
-        TodoTask("Learning", LocalDate.of(2024, 6, 28), true, Priority.Low),
-        TodoTask("Cooking", LocalDate.of(2024, 8, 18), false, Priority.Medium),
+        TodoTask(1,"Programming", LocalDate.of(2024, 4, 18), false, Priority.Low),
+        TodoTask(2,"Teaching", LocalDate.of(2024, 5, 12), false, Priority.High),
+        TodoTask(3,"Learning", LocalDate.of(2024, 6, 28), true, Priority.Low),
+        TodoTask(4,"Cooking", LocalDate.of(2024, 8, 18), false, Priority.Medium),
     )
 }
 
@@ -351,6 +362,7 @@ enum class Priority() {
 }
 
 data class TodoTask(
+    val id: Int,
     val title: String,
     val deadline: LocalDate,
     val isDone: Boolean,
